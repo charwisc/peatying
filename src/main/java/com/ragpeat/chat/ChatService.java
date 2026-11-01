@@ -65,7 +65,8 @@ public class ChatService {
         return Tool.builder()
             .name("search_peat")
             .description("Busca en los artículos, libros y entrevistas de Ray Peat (en inglés) y devuelve los "
-                    + resultsPerSearch + " fragmentos más relevantes, numerados para poder citarlos.")
+                    + resultsPerSearch + " textos más relevantes, numerados para poder citarlos. La persona no ve "
+                    + "la búsqueda: en la respuesta habla de lo que dijo Peat, nunca de estos resultados.")
             .inputSchema(Tool.InputSchema.builder()
                     .properties(Tool.InputSchema.Properties.builder()
                             .putAdditionalProperty("query", JsonValue.from(Map.of(
@@ -286,10 +287,18 @@ public class ChatService {
                 + "«vitamina D», «colesterol»).";
     }
 
+    /**
+     * Además del idioma, recuerda no nombrar la búsqueda. La lista de frases prohibidas del prompt no bastaba:
+     * justo después de leer los resultados, el bot seguía escribiendo "in the sources I can access" o "the fragments
+     * don't show". Dicho aquí, lo último que lee antes de escribir, pesa más.
+     */
     static String languageReminder(String question) {
         String quoted = question.length() > 300 ? question.substring(0, 300) + "…" : question;
-        return "\n---\nResponde en el idioma de este mensaje de la persona (si está en inglés, todo en inglés, "
-                + "también el párrafo sobre la medicina actual, que entonces empieza por «Today, mainstream medicine»): «"
+        return "\n---\nLa persona no sabe que buscas: no menciones la búsqueda ni lo que has recibido (nada de "
+                + "\"sources\", \"material\", \"fragments\", \"passages\", \"excerpts\", \"what I found\", \"anything I can "
+                + "access\", \"these texts\" ni sus equivalentes en otro idioma). Si algo no está, habla solo de Peat: "
+                + "\"Peat didn't discuss blueberries specifically. The closest is his view of fruit…\".\n"
+                + "Responde en el idioma de este mensaje de la persona (si está en inglés, todo en inglés): «"
                 + quoted + "»";
     }
 
