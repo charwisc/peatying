@@ -1031,6 +1031,10 @@ li .source-panel { margin: 8px 0 4px; }
 }
 .cover-sub { max-width: 30ch; margin: 0 auto; font-size: clamp(1.1rem, 3.5vw, 1.35rem); color: #d6d7db; }
 .cover-sub em { font-style: normal; font-weight: 700; color: #f6b39a; }
+/* El botón al chat en la portada: en bermellón, que sobre la foto en gris se ve sin buscarlo. */
+.cover-cta { margin: 24px 0 0; }
+.cover-cta .pill-link { display: inline-block; padding: 14px 22px; font-size: 0.95rem; background: var(--accent); border-color: var(--accent); color: #fff; }
+.cover-cta .pill-link:hover { background: var(--accent); filter: brightness(1.1); }
 .cover .cover-scroll {
   position: absolute;
   left: 50%;
@@ -1071,7 +1075,7 @@ li .source-panel { margin: 8px 0 4px; }
   .cover-sub { margin: 0; color: var(--text-soft); }
   .cover-sub em { color: var(--gold); }
   .cover .cover-scroll { left: 72%; color: var(--muted); }
-  /* El botón "Volver al chat" queda sobre el fondo de la página, no sobre la foto. */
+  /* El botón "Ir al chat" queda sobre el fondo de la página, no sobre la foto. */
   .about-page .topbar .ghost { color: var(--text-soft); background: transparent; backdrop-filter: none; border-color: var(--line); }
 }
 
