@@ -432,7 +432,9 @@ body {
 .footer            { animation: fade 0.8s ease 0.6s both; }
 
 /* Cada mensaje nuevo también aparece subiendo. */
-.message { animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+/* overflow-wrap: anywhere: una cadena larga sin espacios (un enlace, un base64) se parte en vez de ensanchar la
+   página; en el móvil, eso hacía que el navegador la encogiera entera. */
+.message { animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; overflow-wrap: anywhere; }
 .message.no-anim { animation: none; }
 
 /* La respuesta mientras se escribe: un punto que "respira" al final del texto, en vez de un cursor duro. */
@@ -870,13 +872,15 @@ li .source-panel { margin: 8px 0 4px; }
 .conv { border-bottom: var(--rule-hair) solid var(--line); }
 .conv summary { cursor: pointer; padding: 12px 0; list-style: none; }
 .conv summary::-webkit-details-marker { display: none; }
-.conv summary strong { display: block; color: var(--ink); font-weight: 600; }
+/* overflow-wrap: anywhere parte las cadenas largas sin espacios (un base64, un enlace): sin esto, una sola
+   pregunta así ensanchaba la página y el iPhone la encogía entera, como si fuera la versión de ordenador. */
+.conv summary strong { display: block; color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
 .conv summary span { font-size: 0.82rem; color: var(--muted); }
 .conv[open] summary strong { text-decoration: underline; text-decoration-color: var(--accent); }
 .conv-internal summary strong { color: var(--muted); }
 .msg { margin: 0 0 12px; padding: 10px 14px; }
 .msg small { color: var(--muted); }
-.msg p { margin: 4px 0 0; white-space: pre-wrap; color: var(--ink); font-size: 0.95rem; line-height: 1.55; }
+.msg p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); font-size: 0.95rem; line-height: 1.55; }
 .msg-user { background: var(--surface); border-right: var(--rule-bar) solid var(--ink); }
 .msg-assistant { border-left: 3px solid var(--line); }
 .msg-doc { border: var(--rule-hair) dashed var(--ink); max-height: 220px; overflow-y: auto; }
