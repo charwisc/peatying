@@ -857,7 +857,9 @@ li .source-panel { margin: 8px 0 4px; }
 .kpis strong { display: block; font: 400 2.6rem/1 var(--display); color: var(--ink); }
 .kpis span { font-size: 0.85rem; color: var(--muted); }
 .panel-chart svg { width: 100%; height: auto; display: block; }
-.panel-chart text { font: 11px var(--sans); fill: var(--muted); }
+/* Medidas en unidades del dibujo (640 de ancho): en un móvil se ve a la mitad, así que no pueden ser más pequeñas. */
+.panel-chart text { font: 14px var(--sans); fill: var(--muted); }
+.panel-chart text.chart-count { font-weight: 700; font-size: 16px; fill: var(--ink); }
 .bar-visits { fill: var(--line); }
 .bar-askers { fill: var(--accent); }
 .panel-legend { font-size: 0.82rem; color: var(--muted); }
@@ -870,7 +872,7 @@ li .source-panel { margin: 8px 0 4px; }
 .panel-filters { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 0.9rem; }
 .panel-filters input[type="search"] { flex: 1 1 260px; }
 .conv { border-bottom: var(--rule-hair) solid var(--line); }
-.conv summary { cursor: pointer; padding: 12px 0; list-style: none; }
+.conv summary { cursor: pointer; padding: 12px 0; list-style: none; overflow-wrap: anywhere; }
 .conv summary::-webkit-details-marker { display: none; }
 /* overflow-wrap: anywhere parte las cadenas largas sin espacios (un base64, un enlace): sin esto, una sola
    pregunta así ensanchaba la página y el iPhone la encogía entera, como si fuera la versión de ordenador. */

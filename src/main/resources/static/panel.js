@@ -105,12 +105,13 @@ function renderSummary({ visits, daily, referrers, locations, votes }) {
 function renderChart(rows) {
   const box = $("chart");
   if (rows.length === 0) { box.textContent = "Todavía no hay visitas."; return; }
-  const W = 640, H = 180, pad = 24, top = 16;   // top: sitio para el porcentaje encima de la barra más alta
+  const W = 640, H = 180, pad = 8, top = 42;    // top: sitio para las dos cifras encima de la barra más alta
   const max = Math.max(...rows.map((r) => Number(r.visitors)), 1);
   // Con pocos días, barras de 28 px como mucho (si no, un solo día ocuparía todo el ancho).
-  const step = Math.min((W - pad) / rows.length, 40), bar = Math.max(Math.min(step * 0.7, 28), 2);
+  // (24 de margen a la derecha: la fecha de la última barra es más ancha que la barra).
+  const step = Math.min((W - pad - 24) / rows.length, 40), bar = Math.max(Math.min(step * 0.7, 28), 2);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", `0 0 ${W} ${top + H + 20}`);
+  svg.setAttribute("viewBox", `0 0 ${W} ${top + H + 24}`);
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", "Visitantes por día");
   const rect = (x, y, w, h, cls, title) => {
@@ -127,22 +128,23 @@ function renderChart(rows) {
     rect(x, top + H - hv, bar, hv, "bar-visits", `${r.day}: ${r.visitors} visitantes`);
     rect(x, top + H - ha, bar, ha, "bar-askers", `${r.day}: ${r.askers} preguntan`);
   });
-  const label = (x, y, text, anchor = "start") => {
+  const label = (x, y, text, cls) => {
     const t = document.createElementNS(svg.namespaceURI, "text");
-    t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("text-anchor", anchor);
+    t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("text-anchor", "middle");
+    if (cls) t.setAttribute("class", cls);
     t.textContent = text;
     svg.appendChild(t);
   };
-  label(0, 12, String(max));
   // La fecha debajo de su barra: todas si caben (hasta 14 días); si no, una de cada pocas.
-  // Encima de cada barra, qué parte de los visitantes preguntó (con las mismas fechas que llevan etiqueta).
+  // Encima de cada barra (las mismas que llevan fecha), cuántos visitantes hubo y qué parte preguntó.
   const every = Math.ceil(rows.length / 14);
   rows.forEach((r, i) => {
     if (i % every !== 0 && i !== rows.length - 1) return;
-    const x = pad + i * step + bar / 2;
-    label(x, top + H + 16, `${r.day.slice(8)}/${r.day.slice(5, 7)}`, "middle");
+    const x = pad + i * step + bar / 2, barTop = top + H - (r.visitors / max) * H;
+    label(x, top + H + 19, `${r.day.slice(8)}/${r.day.slice(5, 7)}`);
     if (Number(r.visitors) > 0) {
-      label(x, top + H - (r.visitors / max) * H - 4, `${Math.round(100 * r.askers / r.visitors)}%`, "middle");
+      label(x, barTop - 23, String(r.visitors), "chart-count");
+      label(x, barTop - 5, `${Math.round(100 * r.askers / r.visitors)}%`);
     }
   });
   box.replaceChildren(svg);
