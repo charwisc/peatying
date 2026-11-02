@@ -87,8 +87,9 @@ public class ChatService {
     private final String systemPrompt;
     private final int resultsPerSearch;
     private final Tool searchTool;
+    private final LanguageHint languageHint;
 
-    public ChatService(AnthropicClient claude, SearchService searchService,
+    public ChatService(AnthropicClient claude, SearchService searchService, LanguageHint languageHint,
                        @Value("${anthropic.model}") String model,
                        // Se puede cambiar para probar otro prompt sin recompilar: --chat.system-prompt=file:otro.md
                        @Value("${chat.system-prompt:classpath:prompts/system.md}") Resource systemPromptFile,
@@ -97,6 +98,7 @@ public class ChatService {
                        @Value("${chat.results-per-search:5}") int resultsPerSearch) throws IOException {
         this.claude = claude;
         this.searchService = searchService;
+        this.languageHint = languageHint;
         this.model = model;
         // El prompt está en un archivo aparte (src/main/resources/prompts/system.md) para poder
         // leerlo y cambiarlo cómodamente, sin tocar Java.
@@ -151,6 +153,12 @@ public class ChatService {
         }
         if (pageLang != null) {
             system.add(TextBlockParam.builder().text(pageLanguageSection(pageLang)).build());
+        }
+        String language = languageHint.of(question); // "Turkish (Türkçe)", o null si no hace falta o no está claro
+        if (language != null) {
+            system.add(TextBlockParam.builder().text("## Language of the last message\nThe person's last message is "
+                    + "in " + language + ". Write your entire answer in " + language + ", not in Spanish or English.")
+                    .build());
         }
 
         // El builder guarda la conversación entera. Cada vuelta le añadimos mensajes y lo volvemos a enviar:
@@ -224,7 +232,7 @@ public class ChatService {
                 }
                 toolResults.add(ContentBlockParam.ofToolResult(ToolResultBlockParam.builder()
                         .toolUseId(toolUse.id()) // así Claude sabe a qué petición corresponde cada resultado
-                        .content(result + languageReminder(question))
+                        .content(result + languageReminder(question, language))
                         .build()));
             }
             request.addMessage(MessageParam.builder()
@@ -293,16 +301,19 @@ public class ChatService {
      * justo después de leer los resultados, el bot seguía escribiendo "in the sources I can access" o "the fragments
      * don't show". Dicho aquí, lo último que lee antes de escribir, pesa más.
      */
-    static String languageReminder(String question) {
+    static String languageReminder(String question, String language) {
         String quoted = question.length() > 300 ? question.substring(0, 300) + "…" : question;
+        String which = language != null
+                ? "IMPORTANT: this message is in " + language + ". Write your ENTIRE answer in " + language
+                        + ", not in Spanish: «"
+                : "Antes de escribir, fíjate en qué idioma está este mensaje de la persona y escribe TODA la respuesta "
+                        + "en ese idioma (inglés → inglés; turco, alemán u otro → ese idioma; español solo si el mensaje "
+                        + "está en español): «";
         return "\n---\nLa persona no sabe que buscas: no menciones la búsqueda ni lo que has recibido (nada de "
                 + "\"sources\", \"material\", \"fragments\", \"passages\", \"excerpts\", \"what I found\", \"anything I can "
                 + "access\", \"these texts\" ni sus equivalentes en otro idioma). Si algo no está, habla solo de Peat: "
                 + "\"Peat didn't discuss blueberries specifically. The closest is his view of fruit…\".\n"
-                + "Antes de escribir, fíjate en qué idioma está este mensaje de la persona y escribe TODA la respuesta "
-                + "en ese idioma (inglés → inglés; turco, alemán u otro → ese idioma; español solo si el mensaje está "
-                + "en español): «"
-                + quoted + "»";
+                + which + quoted + "»";
     }
 
     /** Lee lo que Claude pidió buscar, busca, y le devuelve los fragmentos como texto numerado. */
