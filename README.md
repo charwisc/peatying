@@ -109,3 +109,7 @@ Other commands: `search "<query>" "<keywords>"`, `ask "<question>"`, `eval` (rul
 ## Notes
 
 Independent, non-commercial project, not affiliated with Ray Peat or raypeat.com. Articles and audio are not stored in this repository: they are downloaded from their public sources, and every answer links back to the original. Answers may contain errors and are not medical advice.
+
+## License
+
+The code is under the [MIT License](LICENSE). It covers only this repository's code: Ray Peat's articles, books and interviews are not included and belong to their owners.
