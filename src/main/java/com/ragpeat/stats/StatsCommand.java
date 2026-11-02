@@ -43,22 +43,27 @@ public class StatsCommand implements CommandLineRunner {
     /** Cuánta gente abre la web cada día, pregunte o no; y qué parte de ella llega a preguntar. */
     private void printVisits() {
         List<Map<String, Object>> rows = jdbc.sql("""
-                SELECT v.day AS dia,
-                       count(*) AS visitantes,
-                       (SELECT count(DISTINCT c.visitor_hash) FROM conversations c
-                         WHERE c.created_at::date = v.day AND NOT c.internal) AS preguntan
-                FROM page_views v
-                GROUP BY v.day
-                ORDER BY v.day DESC
+                WITH days AS (
+                    SELECT v.day AS dia,
+                           count(*) AS visitantes,
+                           (SELECT count(DISTINCT c.visitor_hash) FROM conversations c
+                             WHERE c.created_at::date = v.day AND NOT c.internal) AS preguntan
+                    FROM page_views v
+                    GROUP BY v.day
+                )
+                SELECT dia, visitantes, preguntan, round(100.0 * preguntan / visitantes) AS porcentaje
+                FROM days
+                ORDER BY dia DESC
                 LIMIT 14
                 """)
                 .query()
                 .listOfRows();
 
         System.out.println("\n=== Visitas a la web (personas distintas por día, fecha en UTC)");
-        System.out.printf("%-12s %10s %16s%n", "día", "visitantes", "de ellos preguntan");
+        System.out.printf("%-12s %10s %18s %6s%n", "día", "visitantes", "de ellos preguntan", "%");
         for (Map<String, Object> r : rows) {
-            System.out.printf("%-12s %10s %16s%n", r.get("dia"), r.get("visitantes"), r.get("preguntan"));
+            System.out.printf("%-12s %10s %18s %5s%%%n", r.get("dia"), r.get("visitantes"), r.get("preguntan"),
+                    r.get("porcentaje"));
         }
         if (rows.isEmpty()) {
             System.out.println("(todavía ninguna)");
@@ -68,13 +73,16 @@ public class StatsCommand implements CommandLineRunner {
     /**
      * Una fila por semana (de lunes a domingo). La huella del visitante cambia cada día, así que no se pueden contar
      * personas distintas en la semana: lo honesto es la media de visitantes por día, más las conversaciones y
-     * preguntas de la semana. La semana en curso sale incompleta (ver "días").
+     * preguntas de la semana. "preguntan" es la parte de los visitantes que hizo al menos una pregunta.
+     * La semana en curso sale incompleta (ver "días").
      */
     private void printWeekly() {
         List<Map<String, Object>> rows = jdbc.sql("""
                 WITH visits AS (
-                    SELECT date_trunc('week', day)::date AS semana, day, count(*) AS visitantes
-                    FROM page_views
+                    SELECT date_trunc('week', v.day)::date AS semana, v.day, count(*) AS visitantes,
+                           (SELECT count(DISTINCT c.visitor_hash) FROM conversations c
+                             WHERE c.created_at::date = v.day AND NOT c.internal) AS preguntan
+                    FROM page_views v
                     GROUP BY 1, 2
                 ),
                 chats AS (
@@ -89,6 +97,8 @@ public class StatsCommand implements CommandLineRunner {
                 SELECT v.semana,
                        count(*)                          AS dias,
                        round(avg(v.visitantes), 1)       AS media_diaria,
+                       -- suma de los días y no media de porcentajes: un día con 2 visitantes no pesa como uno con 200
+                       round(100.0 * sum(v.preguntan) / sum(v.visitantes)) AS porcentaje,
                        coalesce(max(ch.conversaciones), 0) AS conversaciones,
                        coalesce(max(ch.preguntas), 0)      AS preguntas
                 FROM visits v
@@ -101,10 +111,11 @@ public class StatsCommand implements CommandLineRunner {
                 .listOfRows();
 
         System.out.println("\n=== Por semana (empieza en lunes; media de visitantes distintos por día)");
-        System.out.printf("%-12s %5s %13s %15s %10s%n", "semana", "días", "media diaria", "conversaciones", "preguntas");
+        System.out.printf("%-12s %5s %13s %10s %15s %10s%n", "semana", "días", "media diaria", "preguntan",
+                "conversaciones", "preguntas");
         for (Map<String, Object> r : rows) {
-            System.out.printf("%-12s %5s %13s %15s %10s%n", r.get("semana"), r.get("dias"), r.get("media_diaria"),
-                    r.get("conversaciones"), r.get("preguntas"));
+            System.out.printf("%-12s %5s %13s %9s%% %15s %10s%n", r.get("semana"), r.get("dias"), r.get("media_diaria"),
+                    r.get("porcentaje"), r.get("conversaciones"), r.get("preguntas"));
         }
         if (rows.isEmpty()) {
             System.out.println("(todavía ninguna)");
