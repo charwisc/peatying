@@ -865,7 +865,15 @@ li .source-panel { margin: 8px 0 4px; }
 .panel-legend { font-size: 0.82rem; color: var(--muted); }
 .sw { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 10px; vertical-align: -1px; }
 .sw-visits { background: var(--line); } .sw-askers { background: var(--accent); }
-.panel-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 32px; }
+.panel-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 32px; align-items: start; }
+/* Desplegables de orígenes y países: la cabecera es el h2 de siempre, con + / − y los tres primeros debajo. */
+.panel-fold summary { cursor: pointer; list-style: none; padding-bottom: 10px; }
+.panel-fold summary::-webkit-details-marker { display: none; }
+.panel-fold summary h2 { margin-bottom: 4px; display: flex; justify-content: space-between; }
+.panel-fold summary h2::after { content: "+"; }
+.panel-fold[open] summary h2::after { content: "−"; }
+.panel-fold summary .panel-sub { display: block; overflow-wrap: anywhere; }
+.panel-fold[open] summary .panel-sub { display: none; }   /* abierto, la lista ya lo dice todo */
 .panel-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 .panel-table td { padding: 6px 0; border-bottom: var(--rule-hair) solid var(--line); }
 .panel-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }

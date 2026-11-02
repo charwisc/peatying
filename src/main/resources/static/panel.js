@@ -99,7 +99,12 @@ function renderSummary({ visits, daily, referrers, locations, votes }) {
   renderChart(last30(visits));
   fillTable($("referrers"), referrers.map((r) => [r.origin, r.visitors]));
   fillTable($("locations"), locations.map((r) => [r.country, r.visitors]));
+  // Con el desplegable cerrado, los tres primeros se ven igualmente en la cabecera.
+  $("referrers-top").textContent = top3(referrers.map((r) => [r.origin, r.visitors]));
+  $("locations-top").textContent = top3(locations.map((r) => [r.country, r.visitors]));
 }
+
+const top3 = (rows) => rows.slice(0, 3).map(([name, n]) => `${name} ${num(n)}`).join(" · ");
 
 /** Barras por día hechas a mano en SVG (la web no carga librerías de fuera). */
 function renderChart(rows) {
