@@ -77,12 +77,15 @@ const num = (n) => Number(n || 0).toLocaleString("es-ES");
 function renderSummary({ visits, daily, referrers, locations, votes }) {
   const last30 = (rows) => rows.filter((r) => new Date(r.day) > Date.now() - 30 * 864e5);
   const sum = (rows, key) => rows.reduce((total, r) => total + Number(r[key] || 0), 0);
+  const visitors = sum(last30(visits), "visitors");
   const kpis = [
     ["Visitantes", num(sum(last30(visits), "visitors"))],
     ["Conversaciones", num(sum(last30(daily), "conversations"))],
     ["Preguntas", num(sum(last30(daily), "questions"))],
     ["Coste IA", sum(last30(daily), "cost").toLocaleString("es-ES", { style: "currency", currency: "USD" })],
     ["Votos 👍 / 👎", `${num(votes.up)} / ${num(votes.down)}`],
+    // De la suma de los días, no la media de porcentajes: un día de 5 visitantes no pesa como uno de 200.
+    ["Visitantes que preguntan",visitors ? `${Math.round(100 * sum(last30(visits), "askers") / visitors)} %` : "–"],
   ];
   $("kpis").replaceChildren(...kpis.map(([label, value]) => {
     const box = document.createElement("div");
@@ -102,12 +105,12 @@ function renderSummary({ visits, daily, referrers, locations, votes }) {
 function renderChart(rows) {
   const box = $("chart");
   if (rows.length === 0) { box.textContent = "Todavía no hay visitas."; return; }
-  const W = 640, H = 180, pad = 24;
+  const W = 640, H = 180, pad = 24, top = 16;   // top: sitio para el porcentaje encima de la barra más alta
   const max = Math.max(...rows.map((r) => Number(r.visitors)), 1);
   // Con pocos días, barras de 28 px como mucho (si no, un solo día ocuparía todo el ancho).
   const step = Math.min((W - pad) / rows.length, 40), bar = Math.max(Math.min(step * 0.7, 28), 2);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", `0 0 ${W} ${H + 20}`);
+  svg.setAttribute("viewBox", `0 0 ${W} ${top + H + 20}`);
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", "Visitantes por día");
   const rect = (x, y, w, h, cls, title) => {
@@ -121,8 +124,8 @@ function renderChart(rows) {
   };
   rows.forEach((r, i) => {
     const x = pad + i * step, hv = (r.visitors / max) * H, ha = (r.askers / max) * H;
-    rect(x, H - hv, bar, hv, "bar-visits", `${r.day}: ${r.visitors} visitantes`);
-    rect(x, H - ha, bar, ha, "bar-askers", `${r.day}: ${r.askers} preguntan`);
+    rect(x, top + H - hv, bar, hv, "bar-visits", `${r.day}: ${r.visitors} visitantes`);
+    rect(x, top + H - ha, bar, ha, "bar-askers", `${r.day}: ${r.askers} preguntan`);
   });
   const label = (x, y, text, anchor = "start") => {
     const t = document.createElementNS(svg.namespaceURI, "text");
@@ -132,9 +135,15 @@ function renderChart(rows) {
   };
   label(0, 12, String(max));
   // La fecha debajo de su barra: todas si caben (hasta 14 días); si no, una de cada pocas.
+  // Encima de cada barra, qué parte de los visitantes preguntó (con las mismas fechas que llevan etiqueta).
   const every = Math.ceil(rows.length / 14);
   rows.forEach((r, i) => {
-    if (i % every === 0 || i === rows.length - 1) label(pad + i * step + bar / 2, H + 16, `${r.day.slice(8)}/${r.day.slice(5, 7)}`, "middle");
+    if (i % every !== 0 && i !== rows.length - 1) return;
+    const x = pad + i * step + bar / 2;
+    label(x, top + H + 16, `${r.day.slice(8)}/${r.day.slice(5, 7)}`, "middle");
+    if (Number(r.visitors) > 0) {
+      label(x, top + H - (r.visitors / max) * H - 4, `${Math.round(100 * r.askers / r.visitors)}%`, "middle");
+    }
   });
   box.replaceChildren(svg);
 }
