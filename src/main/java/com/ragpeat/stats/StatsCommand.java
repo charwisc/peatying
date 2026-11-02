@@ -32,6 +32,7 @@ public class StatsCommand implements CommandLineRunner {
             return;
         }
         printVisits();
+        printWeekly();
         printReferrers();
         printLocations();
         printDaily();
@@ -58,6 +59,52 @@ public class StatsCommand implements CommandLineRunner {
         System.out.printf("%-12s %10s %16s%n", "día", "visitantes", "de ellos preguntan");
         for (Map<String, Object> r : rows) {
             System.out.printf("%-12s %10s %16s%n", r.get("dia"), r.get("visitantes"), r.get("preguntan"));
+        }
+        if (rows.isEmpty()) {
+            System.out.println("(todavía ninguna)");
+        }
+    }
+
+    /**
+     * Una fila por semana (de lunes a domingo). La huella del visitante cambia cada día, así que no se pueden contar
+     * personas distintas en la semana: lo honesto es la media de visitantes por día, más las conversaciones y
+     * preguntas de la semana. La semana en curso sale incompleta (ver "días").
+     */
+    private void printWeekly() {
+        List<Map<String, Object>> rows = jdbc.sql("""
+                WITH visits AS (
+                    SELECT date_trunc('week', day)::date AS semana, day, count(*) AS visitantes
+                    FROM page_views
+                    GROUP BY 1, 2
+                ),
+                chats AS (
+                    SELECT date_trunc('week', c.created_at)::date AS semana,
+                           count(DISTINCT c.id) AS conversaciones,
+                           count(*) FILTER (WHERE m.role = 'user') AS preguntas
+                    FROM conversations c
+                    JOIN chat_messages m ON m.conversation_id = c.id
+                    WHERE NOT c.internal
+                    GROUP BY 1
+                )
+                SELECT v.semana,
+                       count(*)                          AS dias,
+                       round(avg(v.visitantes), 1)       AS media_diaria,
+                       coalesce(max(ch.conversaciones), 0) AS conversaciones,
+                       coalesce(max(ch.preguntas), 0)      AS preguntas
+                FROM visits v
+                LEFT JOIN chats ch ON ch.semana = v.semana
+                GROUP BY v.semana
+                ORDER BY v.semana DESC
+                LIMIT 12
+                """)
+                .query()
+                .listOfRows();
+
+        System.out.println("\n=== Por semana (empieza en lunes; media de visitantes distintos por día)");
+        System.out.printf("%-12s %5s %13s %15s %10s%n", "semana", "días", "media diaria", "conversaciones", "preguntas");
+        for (Map<String, Object> r : rows) {
+            System.out.printf("%-12s %5s %13s %15s %10s%n", r.get("semana"), r.get("dias"), r.get("media_diaria"),
+                    r.get("conversaciones"), r.get("preguntas"));
         }
         if (rows.isEmpty()) {
             System.out.println("(todavía ninguna)");
