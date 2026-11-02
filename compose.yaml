@@ -3,7 +3,7 @@
 # Parar:     docker compose down        (los datos se conservan en el volumen)
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: pgvector/pgvector:pg17@sha256:7d0a41464797aeb9862dfdc0bbf1526b82cfd324cdd8036df19e3545f4a9ccb8
     environment:
       POSTGRES_DB: ragpeat
       POSTGRES_USER: ragpeat

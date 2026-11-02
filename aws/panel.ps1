@@ -1,6 +1,7 @@
 ﻿# Abre el panel privado (peatying.com/panel) en el navegador, ya con su clave.
 # La clave está cifrada en Parameter Store (/ragpeat/admin-token): este script la lee con tu sesión de AWS
-# y se la pasa a la página tras "#", que nunca se envía al servidor. La página la recuerda en este navegador.
+# y se la pasa a la página tras "#", que nunca se envía al servidor. La página la cambia por una sesión de 12 horas
+# (una cookie HttpOnly) y no la guarda: pasado ese tiempo, o tras "Salir", se vuelve a abrir con este script.
 #
 # Uso:  .\aws\panel.ps1        (si dice que la sesión ha caducado: aws login --remote --region eu-west-1)
 #       .\aws\panel.ps1 -Movil (muestra un código QR para abrirlo en el móvil con la cámara)

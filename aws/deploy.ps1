@@ -11,6 +11,13 @@ if (-not (Get-Command aws -ErrorAction SilentlyContinue)) { $aws = "$env:LOCALAP
 . "$PSScriptRoot\config.ps1"      # $instanceId (no está en git: ver config.example.ps1)
 $dbHost = & $aws rds describe-db-instances --db-instance-identifier ragpeat-db --query "DBInstances[0].Endpoint.Address" --output text
 
+# La app no necesita credenciales de AWS (sus claves le llegan en .env). Con IMDSv2 obligatorio y un solo salto de
+# red, al servicio de metadatos solo llega el propio servidor (deploy.sh, Docker), no los contenedores: quien se
+# colara en la app no podría sacar las credenciales del rol. Si ya está así, no cambia nada.
+& $aws ec2 modify-instance-metadata-options --instance-id $instanceId --http-tokens required `
+    --http-put-response-hop-limit 1 --http-endpoint enabled | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Host "Aviso: no se pudo limitar el servicio de metadatos del servidor" }
+
 # Cada archivo viaja en base64 dentro del comando: así no hay problemas con comillas ni saltos de línea.
 $commands = @("mkdir -p /opt/ragpeat")
 foreach ($file in "docker-compose.yml", "Caddyfile", "deploy.sh") {

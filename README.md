@@ -60,7 +60,7 @@ Sonnet never rewrites the text: it only returns ranges of sentence numbers per s
 - **20 topic pages** in each language (`/temas`, `/en/topics`) generated from the same sources with Sonnet, reviewed by hand, with FAQ and schema.org data — static text that search engines and AI assistants can read, unlike chat answers.
 - **Shareable answers** (`/r/<id>`): a server-side copy with link previews for WhatsApp/Telegram.
 - **Feedback**: 👍/👎 per answer with an optional "what went wrong".
-- **Private dashboard** (`/panel`): visits and the share of visitors who ask, origins, countries, cost, votes, and the conversations, with personal data already redacted, to review answer quality and find what to fix — behind a secret token kept in SSM Parameter Store.
+- **Private dashboard** (`/panel`): visits and the share of visitors who ask, origins, countries, cost, votes, and the conversations, with personal data already redacted, to review answer quality and find what to fix — behind a secret token kept in SSM Parameter Store, exchanged once for a 12-hour HttpOnly session cookie, so the token is never stored in the browser.
 - **SEO**: sitemap, canonical URLs, structured data, IndexNow pings, Google Search Console and Bing Webmaster Tools.
 
 ## Stack
@@ -82,13 +82,13 @@ Sonnet never rewrites the text: it only returns ranges of sentence numbers per s
 - **Turkish questions got Spanish answers.** The instructions are in Spanish, and for languages other than Spanish and English the model sometimes followed them instead of the user. A language-detection library was tried first (670 MB of heap in accurate mode, English taken for Lithuanian in light mode). Now a short Claude call names the language only when the question has letters outside English and Spanish, and the model is told in English ("Write your entire answer in Turkish (Türkçe)"): 9/9 in tests, where a Spanish instruction failed 2 times in 6.
 - **An automated attack, and what it actually broke.** Someone ran ~40 prompt-injection and XSS attempts: fake `<system>` tags, base64-encoded orders, a PDF with hidden instructions, `<img onerror>`. None worked (HTML is always escaped, and the CSP blocks inline scripts anyway). What did break was the layout: a 90-character base64 string made the page 1,245 px wide on a phone. Long strings now wrap.
 - **Rate limiting was bypassable.** `X-Forwarded-For` is client-controlled; the real IP is taken only behind our own proxy, and only the last hop.
-- **Costs are bounded by design:** limits per IP (per hour and per day) and a global daily cap, so no single IP can use up the day's quota; request size capped at the proxy; separate limits for documents, translations, shares and visits; and provider-side spend limits.
+- **Costs are bounded by design:** limits per IP (per hour and per day) and a global daily cap, so no single IP can use up the day's quota; caps on how many answers, documents and translations run at once, with generation cancelled as soon as the browser disconnects; timeouts on the web's calls to Claude and Voyage; request size capped at the proxy; separate limits for documents, translations, shares and visits; and provider-side spend limits.
 
 ## Security and privacy
 
-Content-Security-Policy and other security headers, HSTS, no SSH (port 22 closed), private encrypted database, least-privilege IAM role, secrets only in SSM. Public pages built from user actions (shared answers) only contain text read from the database and sources verified against the corpus, never what the browser sends.
+Content-Security-Policy and other security headers, HSTS, no SSH (port 22 closed), private encrypted database reached over certificate-verified TLS, least-privilege IAM role, secrets only in SSM, a read-only app container without Linux capabilities, base images pinned by digest and the build tool by checksum. Public pages built from user actions (shared answers) only contain text read from the database and sources verified against the corpus, never what the browser sends. Retrieved passages and attached documents are marked to the model as quoted data, not instructions, and the scraper only follows raypeat.com over HTTPS.
 
-No IPs are stored. Visitors are counted with a daily-salted anonymous hash; the country comes from an offline DB-IP database on the server, so the IP never leaves it (the city was dropped: on mobile data it is the carrier's, not the user's). Questions are stored with ID numbers, birth dates, record numbers, emails and phones redacted, and deleted after 12 months by a nightly job. No cookies; the chat history lives only in the user's browser.
+No IPs are stored. Visitors are counted with a daily-salted anonymous hash; the country comes from an offline DB-IP database on the server, so the IP never leaves it (the city was dropped: on mobile data it is the carrier's, not the user's). Questions are stored with ID numbers, birth dates, record numbers, emails and phones redacted, and deleted after 12 months by a nightly job; logs record only the size of each search, never its text. No cookies for visitors; the chat history lives only in the user's browser.
 
 ## Run locally
 

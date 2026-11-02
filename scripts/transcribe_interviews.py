@@ -15,14 +15,17 @@ Uso (desde la raíz del proyecto, con GROQ_API_KEY y ANTHROPIC_API_KEY en el ent
   python scripts/transcribe_interviews.py ge.tsv              # "id<TAB>tema<TAB>url" (p. ej. Generative Energy)
 """
 import concurrent.futures
+import ipaddress
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 
@@ -80,30 +83,62 @@ def multipart(fields, file=None):
 
 TMP_DIR = os.path.join("data", "audio_tmp")
 GROQ_URL_LIMIT = 100 * 1024 * 1024          # Groq no acepta enlaces a archivos de más de 100 MB
+MAX_DOWNLOAD = 1024 * 1024 * 1024          # los audios más largos (~3 h a 128 kbps) no llegan a 200 MB
+# El nombre del episodio acaba en rutas de archivo (data/transcripts/<nombre>.json): sin barras ni "..".
+SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}")
+
+
+def check_url(url):
+    """Solo http(s) a direcciones públicas. La lista de enlaces viene de fuera: sin esto, un enlace podría leer
+    archivos de este ordenador (file://) o servicios de la red local o de la nube (169.254.169.254)."""
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ValueError(f"enlace no permitido: {url}")
+    for *_, address in socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80)):
+        if not ipaddress.ip_address(address[0]).is_global:
+            raise ValueError(f"enlace a una dirección que no es pública: {url}")
+    return url
+
+
+class CheckedRedirects(urllib.request.HTTPRedirectHandler):
+    """Las redirecciones pasan la misma comprobación que el enlace original."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        check_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+downloads = urllib.request.build_opener(CheckedRedirects)
 
 
 def compressed(url, name):
     """Para audios de más de 100 MB (los de Generative Energy, a 128 kbps estéreo): los bajamos y los dejamos
     en voz mono Opus a 16 kbps (unos 7 MB por hora), que cabe en el límite de subida de 25 MB y Whisper
-    entiende igual. Se borran al terminar."""
+    entiende igual. Se borran al terminar, también si algo falla."""
     os.makedirs(TMP_DIR, exist_ok=True)
     source, target = os.path.join(TMP_DIR, name + ".mp3"), os.path.join(TMP_DIR, name + ".ogg")
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=900) as resp, open(source, "wb") as f:
-        while chunk := resp.read(1 << 20):
-            f.write(chunk)
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", source, "-ac", "1", "-ar", "16000",
-                    "-c:a", "libopus", "-b:a", "16k", target], check=True)
-    with open(target, "rb") as f:
-        data = f.read()
-    os.remove(source)
-    os.remove(target)
-    return data
+    req = urllib.request.Request(check_url(url), headers={"User-Agent": UA})
+    try:
+        with downloads.open(req, timeout=900) as resp, open(source, "wb") as f:
+            size = 0
+            while chunk := resp.read(1 << 20):
+                size += len(chunk)
+                if size > MAX_DOWNLOAD:
+                    raise ValueError(f"el audio pasa de {MAX_DOWNLOAD >> 20} MB: {url}")
+                f.write(chunk)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", source, "-ac", "1", "-ar", "16000",
+                        "-c:a", "libopus", "-b:a", "16k", target], check=True)
+        with open(target, "rb") as f:
+            return f.read()
+    finally:
+        for path in (source, target):
+            if os.path.exists(path):
+                os.remove(path)
 
 
 def remote_size(url):
-    req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    req = urllib.request.Request(check_url(url), method="HEAD", headers={"User-Agent": UA})
+    with downloads.open(req, timeout=60) as resp:
         return int(resp.headers.get("content-length") or 0)
 
 
@@ -179,6 +214,8 @@ def metadata(url, name=None, given_topic=None):
 def process(job):
     url, name, given_topic = job
     name, show, date, topic = metadata(url, name, given_topic)
+    if not SAFE_NAME.fullmatch(name):
+        raise ValueError(f"nombre de episodio no válido (solo letras, números, '.', '_' y '-'): {name!r}")
     path = os.path.join(OUT_DIR, name + ".json")
     if os.path.exists(path):
         return name, "ya estaba"

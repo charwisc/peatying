@@ -1,30 +1,34 @@
-// Panel privado: métricas y conversaciones. Lee /api/admin/* con la clave del panel.
+// Panel privado: métricas y conversaciones. Lee /api/admin/* con una sesión de 12 horas.
 // Todo lo que escribieron los visitantes se pinta con textContent (como texto), nunca como HTML.
+//
+// La clave del panel solo se manda una vez, para abrir la sesión: el servidor responde con una cookie HttpOnly que
+// ningún JavaScript puede leer, y la clave no se guarda en el navegador. Al caducar la sesión, se vuelve a pedir.
 
-const TOKEN_KEY = "rp-panel-token";
 const $ = (id) => document.getElementById(id);
 let conversations = [];
 
-// aws/panel.ps1 abre peatying.com/panel#t=CLAVE: la guardamos y la quitamos de la dirección.
-// (Lo que va tras # nunca se envía al servidor ni queda en sus registros.)
-// Con "&movil" (código QR de aws/panel.ps1 -Movil) la clave se queda en la dirección: en el iPhone, el icono
-// de "Añadir a pantalla de inicio" guarda la dirección y no comparte datos con Safari.
-if (location.hash.startsWith("#t=")) {
-  const [value, ...flags] = location.hash.slice(3).split("&");
-  try { localStorage.setItem(TOKEN_KEY, decodeURIComponent(value)); } catch (e) { /* nada */ }
-  if (!flags.includes("movil")) history.replaceState(null, "", location.pathname);
+// Las versiones anteriores guardaban la clave en este navegador: la borramos.
+try { localStorage.removeItem("rp-panel-token"); } catch (e) { /* nada */ }
+
+/** Abre la sesión con la clave. null si ha ido bien; si no, el error que hay que enseñar. */
+async function login(token) {
+  try {
+    const response = await fetch("/api/admin/session", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+    if (response.ok) return null;
+    return response.status === 429 ? "Demasiados intentos fallidos. Prueba dentro de una hora." : "La clave no es correcta.";
+  } catch (e) {
+    return "No hay conexión con el servidor.";
+  }
 }
-const token = () => { try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; } };
 
 async function api(path) {
-  const response = await fetch(path, { headers: { Authorization: `Bearer ${token()}` } });
+  const response = await fetch(path);   // la cookie de la sesión va sola
   if (response.status === 401 || response.status === 404) throw new Error("clave");
   if (!response.ok) throw new Error("HTTP " + response.status);
   return response.json();
 }
 
 async function load() {
-  if (!token()) return showLogin();
   try {
     const [summary, list] = await Promise.all([
       api("/api/admin/summary"),
@@ -37,8 +41,7 @@ async function load() {
     renderConversations();
   } catch (e) {
     if (e.message === "clave") {
-      try { localStorage.removeItem(TOKEN_KEY); } catch (err) { /* nada */ }
-      showLogin("La clave no es correcta.");
+      showLogin();                      // sin sesión, o caducada
     } else {
       alert("No se pudieron cargar los datos: " + e.message);
     }
@@ -53,16 +56,34 @@ function showLogin(error) {
   $("token").focus();
 }
 
-$("login").addEventListener("submit", (event) => {
+/**
+ * aws/panel.ps1 abre peatying.com/panel#t=CLAVE: la cambiamos por una sesión y la quitamos de la dirección.
+ * (Lo que va tras # nunca se envía al servidor ni queda en sus registros.)
+ * Con "&movil" (código QR de aws/panel.ps1 -Movil) la clave se queda en la dirección: en el iPhone, el icono de
+ * "Añadir a pantalla de inicio" guarda la dirección, y esa "app" no comparte datos con Safari.
+ */
+async function start() {
+  if (location.hash.startsWith("#t=")) {
+    const [value, ...flags] = location.hash.slice(3).split("&");
+    if (!flags.includes("movil")) history.replaceState(null, "", location.pathname);
+    const error = await login(decodeURIComponent(value));
+    if (error) return showLogin(error);
+  }
+  load();
+}
+
+$("login").addEventListener("submit", async (event) => {
   event.preventDefault();
-  try { localStorage.setItem(TOKEN_KEY, $("token").value.trim()); } catch (e) { /* nada */ }
+  const token = $("token").value.trim();
   $("token").value = "";
+  const error = await login(token);
+  if (error) return showLogin(error);
   load();
 });
-$("logout").addEventListener("click", () => {
+$("logout").addEventListener("click", async () => {
   // Para no salir sin querer: después habría que volver a abrirlo con aws/panel.ps1.
-  if (!confirm("¿Salir del panel? Este navegador olvidará la clave.")) return;
-  try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* nada */ }
+  if (!confirm("¿Salir del panel? Para volver a entrar hará falta la clave (aws/panel.ps1).")) return;
+  try { await fetch("/api/admin/session", { method: "DELETE" }); } catch (e) { /* la sesión caduca sola */ }
   showLogin();
 });
 $("reload").addEventListener("click", load);
@@ -239,4 +260,4 @@ function conversationCard(c) {
   return details;
 }
 
-load();
+start();

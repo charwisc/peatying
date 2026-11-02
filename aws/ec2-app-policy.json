@@ -4,8 +4,13 @@
     {
       "Sid": "LeerSoloNuestrosParametros",
       "Effect": "Allow",
-      "Action": ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"],
-      "Resource": "arn:aws:ssm:eu-west-1:<ACCOUNT_ID>:parameter/ragpeat/*"
+      "Action": "ssm:GetParameter",
+      "Resource": [
+        "arn:aws:ssm:eu-west-1:<ACCOUNT_ID>:parameter/ragpeat/db-password",
+        "arn:aws:ssm:eu-west-1:<ACCOUNT_ID>:parameter/ragpeat/anthropic-api-key",
+        "arn:aws:ssm:eu-west-1:<ACCOUNT_ID>:parameter/ragpeat/voyage-api-key",
+        "arn:aws:ssm:eu-west-1:<ACCOUNT_ID>:parameter/ragpeat/admin-token"
+      ]
     },
     {
       "Sid": "DescifrarParametrosSoloAtravesDeSSM",

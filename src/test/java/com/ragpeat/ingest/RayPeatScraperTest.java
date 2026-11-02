@@ -99,4 +99,15 @@ class RayPeatScraperTest {
 
         assertThat(article.text()).isEqualTo("Primer párrafo (Barat, et al., 2008).\n\nSegundo párrafo.");
     }
+
+    @Test
+    void soloDescargaDeRaypeatPorHttps_niSiquieraConDominiosParecidos() {
+        assertThat(RayPeatScraper.isRayPeatUrl("https://raypeat.com/articles/articles/gelatin.shtml")).isTrue();
+        assertThat(RayPeatScraper.isRayPeatUrl("https://www.raypeat.com/articles/")).isTrue();
+        assertThat(RayPeatScraper.isRayPeatUrl("http://raypeat.com/articles/")).isFalse();
+        assertThat(RayPeatScraper.isRayPeatUrl("https://raypeat.com.evil.example/articles/")).isFalse();
+        assertThat(RayPeatScraper.isRayPeatUrl("https://raypeat.com@evil.example/articles/")).isFalse();
+        assertThat(RayPeatScraper.isRayPeatUrl("https://evil.example/raypeat.com/articles/")).isFalse();
+        assertThat(RayPeatScraper.isRayPeatUrl("no es una url")).isFalse();
+    }
 }

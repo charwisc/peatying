@@ -1,0 +1,18 @@
+# Propone por pull request las versiones nuevas de las dependencias y de las imágenes de Docker.
+# Las imágenes van fijadas por su huella (@sha256): sin esto, nunca recibirían parches de seguridad.
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker-compose"
+    directories:
+      - "/"
+      - "/aws/deploy"
+    schedule:
+      interval: "weekly"

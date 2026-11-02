@@ -1,6 +1,7 @@
 package com.ragpeat.ingest;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -58,7 +59,7 @@ public class RayPeatScraper {
         for (Element link : index.select("a[href*=/articles/articles/][href$=.shtml]")) {
             // "abs:href" convierte "/articles/..." en "https://raypeat.com/articles/...".
             String url = link.attr("abs:href");
-            if (!SKIPPED.contains(new Article(url, "", "").slug())) {
+            if (isRayPeatUrl(url) && !SKIPPED.contains(new Article(url, "", "").slug())) {
                 urls.add(url);
             }
         }
@@ -173,11 +174,31 @@ public class RayPeatScraper {
                 || text.contains("^^^");           // enlace "^^^ Top ^^^"
     }
 
+    /**
+     * Solo raypeat.com por HTTPS. Lo descargado acaba en lo que lee Claude: un enlace del índice o una redirección
+     * hacia otra web podría colarle texto con instrucciones.
+     */
+    static boolean isRayPeatUrl(String url) {
+        try {
+            URI uri = URI.create(url);
+            return "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null
+                    && (uri.getHost().equalsIgnoreCase("raypeat.com") || uri.getHost().equalsIgnoreCase("www.raypeat.com"));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     private Document download(String url) throws IOException {
+        if (!isRayPeatUrl(url)) {
+            throw new IOException("Dirección fuera de raypeat.com: " + url);
+        }
         Connection.Response response = Jsoup.connect(url)
                 .userAgent(USER_AGENT)
                 .timeout(30_000)
                 .execute();
+        if (!isRayPeatUrl(response.url().toString())) {
+            throw new IOException("Redirección fuera de raypeat.com: " + response.url());
+        }
         // La web dice ser ISO-8859-1, pero en realidad usa Windows-1252 (comillas “ ”).
         // Si no lo forzamos, esas comillas salen como caracteres raros.
         response.charset("windows-1252");

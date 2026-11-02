@@ -20,6 +20,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *  - X-Content-Type-Options: el navegador no "adivina" el tipo de un archivo; usa el que decimos.
  *  - Referrer-Policy: al pulsar un enlace a raypeat.com solo viaja nuestro dominio, no la URL completa.
  *  - Permissions-Policy: la página no puede pedir cámara, micrófono ni ubicación.
+ *  - Cache-Control: no-store en /api/admin: las conversaciones y documentos del panel no se quedan en la caché
+ *    del navegador ni de nada intermedio.
  *
  * El HTTPS obligatorio (Strict-Transport-Security) lo pone Caddy, que es quien sirve el HTTPS.
  */
@@ -41,6 +43,9 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        if (request.getRequestURI().startsWith("/api/admin/")) {
+            response.setHeader("Cache-Control", "no-store");
+        }
         chain.doFilter(request, response);
     }
 }
