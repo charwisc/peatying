@@ -1,6 +1,6 @@
-# Peatying — Ray Peat's ideas, in Spanish
+# Peatying — ask Ray Peat's work
 
-**[peatying.com](https://peatying.com)** · A Spanish chatbot about the ideas of biologist Ray Peat (1936–2022). Every answer is grounded in his own words — 78 articles, 5 books and 221 radio interviews — and cites them, with the original text and audio one click away (books are cited by page, without showing their copyrighted text).
+**[peatying.com](https://peatying.com)** · A chatbot about the ideas of biologist Ray Peat (1936–2022), with a Spanish and an English site, that answers in whatever language you write in. Every answer is grounded in his own words — 78 articles, 5 books and 221 radio interviews — and cites them, with the original text and audio one click away (books are cited by page, without showing their copyrighted text).
 
 ![peatying.com](src/main/resources/static/img/og.jpg)
 
@@ -17,49 +17,50 @@ The point of RAG here is faithfulness: the bot should only attribute to Peat wha
 
 Example: without RAG, Claude says Peat saw lactic acid as "a useful fuel". Peat wrote the opposite: *"I have begun thinking of lactic acid as a toxin."*
 
-A cheaper rule-based suite runs on every prompt change: expected sources cited, literal quotes that really exist in the corpus (and never from automatic transcripts), admitting when Peat never covered a topic, refusing off-topic questions. Latest run: **33/34**, ~$0.03. Details in [`eval/RESULTS.md`](eval/RESULTS.md).
+A cheaper rule-based suite runs on every prompt change: expected sources cited, literal quotes that really exist in the corpus (and never from automatic transcripts), admitting when Peat never covered a topic, refusing off-topic questions. Latest run (November 2026): **32/34**, ~$0.01; the two failures (vegetables, mushrooms) cite interviews or a book page instead of the expected articles. Details in [`eval/RESULTS.md`](eval/RESULTS.md).
 
 ## How it works
 
 ```mermaid
-flowchart LR
-    U[Browser] -- POST /api/chat --> C[ChatController<br/>rate limit · SSE]
+flowchart TD
+    U[Browser] -->|question| C[ChatController<br/>rate limits]
     C --> S[ChatService<br/>tool-use loop]
-    S -- messages + search_peat tool --> A[Claude Haiku]
-    A -- "search_peat(query, keywords)" --> S
+    S -->|question + search_peat tool| A[Claude Haiku 5.5]
+    A -->|search_peat calls| S
     S --> H[SearchService<br/>hybrid search]
-    H -- embedding --> V[Voyage AI]
-    H -- vector + full-text, RRF --> P[(Postgres + pgvector)]
-    S -- streamed tokens --> C -- server-sent events --> U
+    H -->|embedding| V[Voyage AI]
+    H -->|vector + full text| P[(Postgres + pgvector)]
+    S -.->|answer, streamed| U
 ```
 
 1. **Articles.** A Jsoup scraper downloads the 78 articles from raypeat.com, handling two HTML layouts, a Windows-1252 charset, broken characters, epigraphs mistaken for titles and bibliographies. Text is split into ~1,500-character chunks on paragraph boundaries and embedded with Voyage AI (`voyage-4`, 1024 dims). Re-indexing is incremental.
 2. **Books.** His 5 books, extracted from PDF with printed page numbers recovered from the page headers (a fixed offset per book, taken from the most common value so misread numbers don't matter). Each page is its own document (Generative Energy, p. 35). The text is used to answer but never sent to the browser: the source panel shows only book, page and where to buy it.
 3. **Interviews.** ~250 hours of public radio and podcast audio, transcribed by my own pipeline (below). Chunks keep who is speaking, and only Peat's words count as his opinion.
 4. **Hybrid search.** One SQL query combines pgvector cosine distance (meaning, works across languages) with Postgres full-text search (exact terms like "pregnenolone"), merged with Reciprocal Rank Fusion, with a per-type quota (3 written passages from articles and books + 2 interviews per 5 results) so the written work is never crowded out.
-5. **Agentic answer.** Claude gets the question and a `search_peat` tool. It rewrites the question in English, picks keywords, may search again from another angle (max 3 searches), then answers in Spanish citing passages as `[n]`. The loop is written by hand against the Messages API, not a framework.
+5. **Agentic answer.** Claude gets the question and a `search_peat` tool. It rewrites the question in English, picks keywords, may search again from another angle (max 3 searches, 6 with an attached document), then answers in the language of the question, citing passages as `[n]`. The loop is written by hand against the Messages API, not a framework.
 6. **Streaming.** Tokens are streamed over server-sent events from virtual threads; the frontend renders markdown live and turns `[n]` into buttons that open the original passage, which can be translated to Spanish on demand.
 
 ### Transcription pipeline
 
 ```mermaid
-flowchart LR
-    M[Public MP3s] -- URL, or compressed to Opus 16 kbps if >100 MB --> W[Whisper large-v3 turbo<br/>on Groq]
-    W -- timestamped text --> X[Split into numbered sentences]
+flowchart TD
+    M[Public MP3s] -->|URL, or Opus 16 kbps if over 100 MB| W[Whisper large-v3 turbo<br/>on Groq]
+    W -->|timestamped text| X[Numbered sentences]
     X --> L[Claude Sonnet<br/>who says each sentence?]
-    L -- "ranges: PEAT / HOST / CALLER" --> J[JSON per episode]
-    J -- index-interviews · embed --> P[(Postgres)]
+    L -->|PEAT / HOST / CALLER ranges| J[JSON per episode]
+    J -->|index-interviews, embed| P[(Postgres)]
 ```
 
 Sonnet never rewrites the text: it only returns ranges of sentence numbers per speaker, which are validated to cover every sentence exactly once, so transcripts stay verbatim. Show-specific hints help with hard cases (a co-host who also explains biology at length). 224 episodes, ~250 h of audio, ~$27 in total. Haiku, gpt-oss and Qwen were tried first and misattributed turns or broke the output format.
 
 ## Product
 
-- **Chat** with follow-up questions, "clarify this" on any selected fragment, conversation history kept in the browser (rename, delete, resume), Markdown download.
-- **20 topic pages** (`/temas`) generated from the same sources with Sonnet, reviewed by hand, with FAQ and schema.org data — static text that search engines and AI assistants can read, unlike chat answers.
+- **Chat** in Spanish (`/`) and English (`/en`), answering in the language of each question, with follow-up questions, "clarify this" on any selected fragment, conversation history kept in the browser (rename, delete, resume), Markdown download.
+- **Lab results and reports**: attach a PDF or a photo and ask about it. Claude reads the file, personal data is redacted, only the text is kept and the file is discarded; the bot then explains what Peat said about each value.
+- **20 topic pages** in each language (`/temas`, `/en/topics`) generated from the same sources with Sonnet, reviewed by hand, with FAQ and schema.org data — static text that search engines and AI assistants can read, unlike chat answers.
 - **Shareable answers** (`/r/<id>`): a server-side copy with link previews for WhatsApp/Telegram.
 - **Feedback**: 👍/👎 per answer with an optional "what went wrong".
-- **Private dashboard** (`/panel`): visits, origins, approximate locations, cost, votes and every conversation with search — behind a secret token kept in SSM Parameter Store.
+- **Private dashboard** (`/panel`): visits and the share of visitors who ask, origins, approximate locations, cost, votes and every conversation with search — behind a secret token kept in SSM Parameter Store.
 - **SEO**: sitemap, canonical URLs, structured data, IndexNow pings, Google Search Console and Bing Webmaster Tools.
 
 ## Stack
@@ -78,8 +79,10 @@ Sonnet never rewrites the text: it only returns ranges of sentence numbers per s
 - **Two speakers who both explain biology.** On one podcast the co-host talks about hormones as much as Peat. A per-show hint plus a check for third-person mentions of Peat inside his own turns found 9 suspicious turns out of 2,182, almost all false alarms.
 - **A personal-data filter that ate a sentence.** Users paste lab reports with ID numbers into the chat, so messages are redacted before storage. The first version took "Energía celular:" (cell energy) for a phone label ("celular" = mobile phone). Everyday words now only count as labels at the start of a line, with tests for bot answers.
 - **Users kept seeing old versions.** Every file inside a Spring Boot jar has the same 1980 timestamp, so `Last-Modified` caching never invalidated. Replaced with content-based ETags — which in turn returned empty bodies on forwarded clean URLs, so those are excluded.
+- **Turkish questions got Spanish answers.** The instructions are in Spanish, and for languages other than Spanish and English the model sometimes followed them instead of the user. A language-detection library was tried first (670 MB of heap in accurate mode, English taken for Lithuanian in light mode). Now a short Claude call names the language only when the question has letters outside English and Spanish, and the model is told in English ("Write your entire answer in Turkish (Türkçe)"): 9/9 in tests, where a Spanish instruction failed 2 times in 6.
+- **An automated attack, and what it actually broke.** Someone ran ~40 prompt-injection and XSS attempts: fake `<system>` tags, base64-encoded orders, a PDF with hidden instructions, `<img onerror>`. None worked (HTML is always escaped, and the CSP blocks inline scripts anyway). What did break was the layout: a 90-character base64 string made the page 1,245 px wide on a phone. Long strings now wrap.
 - **Rate limiting was bypassable.** `X-Forwarded-For` is client-controlled; the real IP is taken only behind our own proxy, and only the last hop.
-- **Costs are bounded by design:** per-IP and global daily limits, request size capped at the proxy, separate limits for translations, shares and visits, and provider-side spend limits.
+- **Costs are bounded by design:** limits per IP (per hour and per day) and a global daily cap, so no single IP can use up the day's quota; request size capped at the proxy; separate limits for documents, translations, shares and visits; and provider-side spend limits.
 
 ## Security and privacy
 
