@@ -78,6 +78,32 @@ class PersonalDataTest {
     }
 
     @Test
+    void handlesEnglishLabReports() {
+        // Datos inventados, con la forma de una analítica de EE. UU.
+        String report = """
+                Patient Name: SMITH, JOHN A
+                DOB: 01/02/1980    Age: 46
+                MRN: 00123456
+                Ordering Physician: Jane Doe, MD
+                Phone: (555) 123-4567
+                Accession #: AB12-3456
+                TSH 3.20 uIU/mL 0.45-4.50
+                Testosterone, Total: 512 ng/dL""";
+        String redacted = PersonalData.redact(report);
+        assertThat(redacted).doesNotContain("SMITH", "1980", "00123456", "Jane Doe", "123-4567", "AB12-3456");
+        assertThat(redacted).contains("TSH 3.20 uIU/mL 0.45-4.50", "Testosterone, Total: 512 ng/dL",
+                "Patient Name: [dato personal]", "DOB: [dato personal]");
+    }
+
+    @Test
+    void leavesNormalEnglishQuestionsAlone() {
+        String question = """
+                My doctor says my TSH is 4.5 and my age is 46. What did Peat think about the name "hypothyroid"?
+                Patients often ask: is 1.5 to 2 g of aspirin a lot? Range 0.45-4.50, 150-400, 3.5 - 5.0""";
+        assertThat(PersonalData.redact(question)).isEqualTo(question);
+    }
+
+    @Test
     void leavesNormalQuestionsAlone() {
         String question = "Mi médico me dijo que tengo el LDL en 160 y la TSH en 4,5. ¿Qué pensaba Peat? Peso 52 kg y mido 157 cm.";
         assertThat(PersonalData.redact(question)).isEqualTo(question);

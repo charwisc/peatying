@@ -19,7 +19,11 @@ public final class PersonalData {
             "fecha\\s+de\\s+nacimiento", "fecha\\s+nac(?:imiento|\\.)?", "f\\.\\s*nac(?:imiento|\\.)?",
             "historia\\s+cl[ií]nica", "(?:n[º°o]|nro|n[uú]m(?:ero)?)\\.?\\s*(?:de\\s+)?(?:historia|afiliado|informe|documento|protocolo|paciente|socio|orden|muestra)",
             "dni", "nie", "nif", "cuil", "cuit", "pasaporte", "n?hc", "cip", "sip", "nss",
-            "tarjeta\\s+sanitaria", "seguridad\\s+social", "afiliado");
+            "tarjeta\\s+sanitaria", "seguridad\\s+social", "afiliado",
+            // Informes en inglés (la web en inglés recibe sobre todo analíticas de EE. UU.).
+            "date\\s+of\\s+birth", "birth\\s*date", "dob", "d\\.o\\.b\\.?", "mrn", "ssn",
+            "medical\\s+record(?:\\s+(?:number|no\\.?|#))?", "social\\s+security(?:\\s+(?:number|no\\.?|#))?",
+            "(?:patient|member|insurance|account|accession|specimen|requisition)\\s*(?:id|number|no\\.?|#)");
 
     /**
      * Palabras que también salen en frases normales ("Energía celular:", "El médico:"). Solo cuentan como
@@ -32,7 +36,10 @@ public final class PersonalData {
             "domicilio", "direcci[oó]n", "tel[eé]fono", "tel", "m[oó]vil", "celular", "e-?mail", "correo",
             // Firmas al pie de los informes: "Responsable Análisis Clínicos: ...", "Dirección técnica: ...".
             "responsable[^:\\n]{0,40}", "direcci[oó]n\\s+t[eé]cnica", "facultativ[oa][^:\\n]{0,20}",
-            "(?:firmado|validado|revisado)(?:\\s+por)?", "peticionari[oa]");
+            "(?:firmado|validado|revisado)(?:\\s+por)?", "peticionari[oa]",
+            // En inglés.
+            "(?:patient\\s+|first\\s+|last\\s+|full\\s+)?name", "patient", "surname", "age", "address",
+            "phone", "cell", "physician", "provider", "(?:ordering|referring)\\s+(?:physician|provider|doctor)");
 
     /**
      * La etiqueta tiene que ir seguida de dos puntos (así "mi médico me dijo" no se toca), y lo que sigue
@@ -49,6 +56,7 @@ public final class PersonalData {
             "(?<![\\w])\\d{8}[A-HJ-NP-TV-Z](?![\\w])",        // DNI español
             "(?<![\\w])[XYZ]\\d{7}[A-Z](?![\\w])",            // NIE
             "\\+\\d[\\d\\s().-]{7,}\\d",                      // teléfono con prefijo internacional
+            "(?<![\\w.,])\\(?\\d{3}\\)?[ .-]\\d{3}[ .-]\\d{4}(?![\\w.,])", // teléfono de EE. UU.: (555) 123-4567
             "(?<![\\d.,])\\d{8,}(?![\\d.,])"));               // números largos: documentos, códigos de barras, teléfonos
 
     /** Hasta dónde llega el valor de una etiqueta: fin de línea, tabulador o dos espacios (columnas). */
