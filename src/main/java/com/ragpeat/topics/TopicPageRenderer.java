@@ -234,7 +234,7 @@ public class TopicPageRenderer {
                   <meta property="og:image" content="https://peatying.com/img/og-mascota.jpg">
                   <meta property="og:locale" content="%7$s">
                   <meta name="twitter:card" content="summary_large_image">
-                  <link rel="icon" href="/img/favicon.png" type="image/png" sizes="144x144">
+                  <link rel="icon" href="/img/favicon-mascota.png" type="image/png" sizes="144x144">
                   <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
                   <link rel="stylesheet" href="/styles.css">
                 %4$s</head>

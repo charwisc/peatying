@@ -291,7 +291,7 @@ public class ShareController {
                   <meta property="og:image" content="https://peatying.com/img/og-mascota.jpg">
                   <meta property="og:locale" content="%6$s">
                   <meta name="twitter:card" content="summary_large_image">
-                  <link rel="icon" href="/img/favicon.png" type="image/png" sizes="144x144">
+                  <link rel="icon" href="/img/favicon-mascota.png" type="image/png" sizes="144x144">
                   <link rel="stylesheet" href="/styles.css">
                 </head>
                 <body class="topic-page">
