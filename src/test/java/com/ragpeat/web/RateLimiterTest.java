@@ -46,4 +46,31 @@ class RateLimiterTest {
         clock.advance(Duration.ofHours(24));
         assertThat(limiter.tryAcquire("3.3.3.3")).isTrue();
     }
+
+    @Test
+    void cadaIpTieneUnTopeDiario_aunqueRespeteElDeLaHora() {
+        FakeClock clock = new FakeClock();   // 10:00 UTC
+        RateLimiter limiter = new RateLimiter(2, Duration.ofMinutes(60), 3, 100, clock);
+
+        assertThat(limiter.tryAcquire("1.1.1.1")).isTrue();
+        assertThat(limiter.tryAcquire("1.1.1.1")).isTrue();
+        clock.advance(Duration.ofMinutes(61));
+        assertThat(limiter.tryAcquire("1.1.1.1")).isTrue();
+        assertThat(limiter.tryAcquire("1.1.1.1")).isFalse();  // la hora lo permitiría, pero ya lleva 3 hoy
+        assertThat(limiter.tryAcquire("2.2.2.2")).isTrue();   // otra IP no se ve afectada
+
+        clock.advance(Duration.ofHours(13));                   // 00:01 UTC del día siguiente
+        assertThat(limiter.tryAcquire("1.1.1.1")).isTrue();
+    }
+
+    @Test
+    void elDiaEmpiezaAMedianocheUtc_noVeinticuatroHorasDespuesDeArrancar() {
+        FakeClock clock = new FakeClock();   // arranca a las 10:00 UTC
+        RateLimiter limiter = new RateLimiter(10, Duration.ofMinutes(60), 1, clock);
+
+        assertThat(limiter.tryAcquire("1.1.1.1")).isTrue();
+        assertThat(limiter.tryAcquire("2.2.2.2")).isFalse();
+        clock.advance(Duration.ofHours(14));                   // 00:00 UTC: solo han pasado 14 horas
+        assertThat(limiter.tryAcquire("2.2.2.2")).isTrue();
+    }
 }

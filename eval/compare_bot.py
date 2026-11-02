@@ -3,7 +3,8 @@ y guarda cada respuesta con sus fuentes. Es la mitad "bot" de la comparación co
 
     python -I eval/compare_bot.py eval/compare-conversations.json eval/results/compare-bot.json
 
-Arranca el servidor con más margen que el límite normal por persona: --chat.limit.per-ip=200.
+Arranca el servidor con más margen que el límite normal por persona:
+--chat.limit.per-ip=200 --chat.limit.per-ip-daily=2000.
 Si se corta, al volver a lanzarlo sigue por las conversaciones que faltan.
 """
 import json
