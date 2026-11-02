@@ -284,7 +284,8 @@ public class ChatService {
                 + "mensaje no deja claro el idioma y no hay mensajes anteriores que lo aclaren, responde en " + language
                 + ". Cuenta como no claro todo mensaje que no sea una frase: una sigla («CFS», «TSH»), un nombre o un "
                 + "término suelto, aunque se parezca a una palabra de otro idioma o esté mal escrito («triglicerides», "
-                + "«vitamina D», «colesterol»).";
+                + "«vitamina D», «colesterol»). Una frase en turco, alemán, polaco u otro idioma SÍ es clara: se "
+                + "responde en ese idioma, no en " + language + " ni en español.";
     }
 
     /**
@@ -298,7 +299,9 @@ public class ChatService {
                 + "\"sources\", \"material\", \"fragments\", \"passages\", \"excerpts\", \"what I found\", \"anything I can "
                 + "access\", \"these texts\" ni sus equivalentes en otro idioma). Si algo no está, habla solo de Peat: "
                 + "\"Peat didn't discuss blueberries specifically. The closest is his view of fruit…\".\n"
-                + "Responde en el idioma de este mensaje de la persona (si está en inglés, todo en inglés): «"
+                + "Antes de escribir, fíjate en qué idioma está este mensaje de la persona y escribe TODA la respuesta "
+                + "en ese idioma (inglés → inglés; turco, alemán u otro → ese idioma; español solo si el mensaje está "
+                + "en español): «"
                 + quoted + "»";
     }
 
