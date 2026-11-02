@@ -23,7 +23,13 @@ public final class PersonalData {
             // Informes en inglés (la web en inglés recibe sobre todo analíticas de EE. UU.).
             "date\\s+of\\s+birth", "birth\\s*date", "dob", "d\\.o\\.b\\.?", "mrn", "ssn",
             "medical\\s+record(?:\\s+(?:number|no\\.?|#))?", "social\\s+security(?:\\s+(?:number|no\\.?|#))?",
-            "(?:patient|member|insurance|account|accession|specimen|requisition)\\s*(?:id|number|no\\.?|#)");
+            "(?:patient|member|insurance|account|accession|specimen|requisition)\\s*(?:id|number|no\\.?|#)",
+            // Portugués, francés, alemán, italiano y turco (lo que más puede llegar pegado tal cual).
+            "data\\s+de\\s+nascimento", "cpf", "rg", "cart[aã]o\\s+sus", "prontu[aá]rio",
+            "date\\s+de\\s+naissance", "num[ée]ro\\s+de\\s+s[ée]curit[ée]\\s+sociale", "nir",
+            "geburtsdatum", "geb\\.(?:-datum)?", "versicherten(?:nummer|-nr\\.?)", "patienten(?:nummer|-nr\\.?)",
+            "data\\s+di\\s+nascita", "codice\\s+fiscale", "tessera\\s+sanitaria",
+            "do[gğ]um\\s+tarihi", "t\\.?\\s?c\\.?\\s+kimlik(?:\\s+no)?");
 
     /**
      * Palabras que también salen en frases normales ("Energía celular:", "El médico:"). Solo cuentan como
@@ -39,7 +45,13 @@ public final class PersonalData {
             "(?:firmado|validado|revisado)(?:\\s+por)?", "peticionari[oa]",
             // En inglés.
             "(?:patient\\s+|first\\s+|last\\s+|full\\s+)?name", "patient", "surname", "age", "address",
-            "phone", "cell", "physician", "provider", "(?:ordering|referring)\\s+(?:physician|provider|doctor)");
+            "phone", "cell", "physician", "provider", "(?:ordering|referring)\\s+(?:physician|provider|doctor)",
+            // Portugués, francés, alemán, italiano y turco.
+            "nome", "endere[cç]o", "telefone", "idade",
+            "nom", "pr[ée]nom", "adresse", "t[ée]l[ée]phone", "[âa]ge", "m[ée]decin(?:\\s+prescripteur)?",
+            "vorname", "nachname", "anschrift", "telefon", "alter", "[äa]rzt(?:in)?", "einsender",
+            "cognome", "indirizzo", "telefono", "et[àa]",
+            "ad[ıi](?:\\s+soyad[ıi])?", "soyad[ıi]", "hasta(?:\\s+ad[ıi])?", "telefon\\s+no");
 
     /**
      * La etiqueta tiene que ir seguida de dos puntos (así "mi médico me dijo" no se toca), y lo que sigue

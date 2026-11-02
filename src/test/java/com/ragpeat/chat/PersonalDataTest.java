@@ -104,6 +104,38 @@ class PersonalDataTest {
     }
 
     @Test
+    void handlesOtherLanguagesLabReports() {
+        // Datos inventados: una línea típica de informe en portugués, francés, alemán, italiano y turco.
+        String report = """
+                Nome: MARIA PRUEBA SILVA
+                Data de nascimento: 03/04/1985
+                CPF: 123.456.789-00
+                Nom: DUPONT
+                Date de naissance: 05/06/1975
+                Geburtsdatum: 07/08/1965
+                Arzt: Dr. Prueba Müller
+                Codice fiscale: PRBMRA85D43H501X
+                Adı Soyadı: AYŞE PRUEBA
+                Doğum Tarihi: 09/10/1990
+                TSH: 2,1 mU/l
+                Ferritin: 85 ng/ml""";
+        String redacted = PersonalData.redact(report);
+        assertThat(redacted).doesNotContain("MARIA", "1985", "123.456", "DUPONT", "1975", "1965", "Müller",
+                "PRBMRA", "AYŞE", "1990");
+        assertThat(redacted).contains("TSH: 2,1 mU/l", "Ferritin: 85 ng/ml", "Geburtsdatum: [dato personal]");
+    }
+
+    @Test
+    void leavesNormalQuestionsInOtherLanguagesAlone() {
+        String question = """
+                Mein Arzt sagt, mein TSH ist 4,5. Was dachte Peat über Schilddrüse? Alter 46, Gewicht 70 kg.
+                O que Peat pensava do açúcar? A minha idade é 40 anos.
+                Que pensait Peat du café ? Mon médecin dit que c'est mauvais.
+                Doktorum TSH değerim 4,5 dedi. Peat tiroid hakkında ne düşünüyordu?""";
+        assertThat(PersonalData.redact(question)).isEqualTo(question);
+    }
+
+    @Test
     void leavesNormalQuestionsAlone() {
         String question = "Mi médico me dijo que tengo el LDL en 160 y la TSH en 4,5. ¿Qué pensaba Peat? Peso 52 kg y mido 157 cm.";
         assertThat(PersonalData.redact(question)).isEqualTo(question);
